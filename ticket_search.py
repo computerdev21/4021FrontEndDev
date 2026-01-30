@@ -3,8 +3,9 @@ import urllib.parse
 import urllib.error
 import json
 import sys
+import time
 
-def search_events(api_key, keyword):
+def search_events(api_key, keyword, quiet=False):
     """
     Searches for events on Ticketmaster using the Discovery API.
 
@@ -23,7 +24,8 @@ def search_events(api_key, keyword):
 
     url = f"{base_url}?{params}"
 
-    print(f"Searching for '{keyword}'...")
+    if not quiet:
+        print(f"Searching for '{keyword}'...")
 
     try:
         with urllib.request.urlopen(url) as response:
@@ -36,7 +38,8 @@ def search_events(api_key, keyword):
             # Check if any events were found
             if "_embedded" in data and "events" in data["_embedded"]:
                 events = data["_embedded"]["events"]
-                print(f"\nFound {len(events)} events:\n")
+                if not quiet:
+                    print(f"\nFound {len(events)} events:\n")
 
                 for event in events:
                     name = event.get("name", "Unknown Event")
@@ -52,20 +55,48 @@ def search_events(api_key, keyword):
                     print(f"Venue: {venue_name}")
                     print(f"Link:  {url}")
                     print("-" * 40)
+                return True
             else:
-                print(f"No events found matching '{keyword}'.")
+                if not quiet:
+                    print(f"No events found matching '{keyword}'.")
+                return False
 
     except urllib.error.HTTPError as e:
         print(f"HTTP Error: {e.code} - {e.reason}")
         if e.code == 401:
             print("Please check your API Key.")
+        return False
     except urllib.error.URLError as e:
         print(f"URL Error: {e.reason}")
+        return False
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+        return False
+
+def monitor_events(api_key, keyword, interval):
+    """
+    Polls the API at a set interval to check for events.
+    """
+    print(f"\n[MONITOR STARTING] Checking for '{keyword}' every {interval} seconds...")
+    print("Press Ctrl+C to stop.\n")
+
+    try:
+        while True:
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] Checking...", end='\r')
+
+            found = search_events(api_key, keyword, quiet=True)
+
+            if found:
+                print(f"\n[{timestamp}] MATCH FOUND! See details above.")
+                # Optional: Ring a bell or exit? For now, we just keep monitoring.
+
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("\n[MONITOR STOPPED] Exiting.")
 
 def main():
-    print("--- Ticketmaster Event Search Tool ---")
+    print("--- Ticketmaster Event Search & Monitor Tool ---")
 
     # Prompt for API Key
     api_key = input("Enter your Ticketmaster API Key: ").strip()
@@ -79,7 +110,20 @@ def main():
         print("Error: Search keyword is required.")
         return
 
-    search_events(api_key, keyword)
+    # Mode selection
+    mode = input("Choose mode: (1) Search once, (2) Monitor indefinitely [1]: ").strip()
+
+    if mode == '2':
+        try:
+            interval = int(input("Enter polling interval in seconds (default 30): ").strip() or "30")
+            if interval < 5:
+                print("Warning: Intervals less than 5 seconds may hit rate limits.")
+            monitor_events(api_key, keyword, interval)
+        except ValueError:
+            print("Invalid interval. Using default (30s).")
+            monitor_events(api_key, keyword, 30)
+    else:
+        search_events(api_key, keyword)
 
 if __name__ == "__main__":
     main()

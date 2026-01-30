@@ -11,6 +11,14 @@ Creating bots to automate ticket purchasing (often called "scalping bots" or "sp
 
 **This guide does NOT provide instructions for bypassing queues, CAPTCHAs, or purchasing tickets automatically.**
 
+## 🛡️ Internal Testing & Simulation
+
+For users conducting authorized internal testing or ethical verification of ticket availability:
+
+- **Use the API:** The most reliable way to simulate "monitoring" or "checking" for tickets is via the API. This avoids the brittleness of browser automation and provides structured data.
+- **Monitoring vs. Buying:** While the API allows you to find tickets instantly, the actual purchase should be completed by following the `url` provided in the API response.
+- **Rate Limits:** Be mindful of API rate limits. Polling too frequently can result in 429 (Too Many Requests) errors.
+
 ## ✅ Legitimate Alternative: The Ticketmaster Discovery API
 
 Ticketmaster provides an official **Discovery API** that allows developers to search for events, attractions, and venues. This is the approved way to build applications that integrate with Ticketmaster data.
